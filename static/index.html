@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NameLock - banner name proof</title>
+<style>
+  :root { --ink:#1b1b1f; --mute:#6b6b76; --line:#dcdce3; --bad:#b3261e; --ok:#1b7a43; --warn:#8a5a00; --bg:#f6f6f8; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:16px/1.45 system-ui,sans-serif; color:var(--ink); background:var(--bg); }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: var(--mute); }
+  section { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; margin-bottom:6px; }
+  textarea, input[type=text] { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  textarea { min-height: 84px; resize: vertical; }
+  button { font:inherit; padding:9px 14px; border-radius:8px; border:1px solid var(--ink); background:var(--ink); color:#fff; cursor:pointer; }
+  button.secondary { background:#fff; color:var(--ink); }
+  button:disabled { background:#c9c9d1; border-color:#c9c9d1; cursor:not-allowed; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+  .meta { color:var(--mute); font-size:14px; }
+  .banner { font:700 28px/1.2 system-ui,sans-serif; text-align:center; padding:28px 12px; border:2px dashed var(--line); border-radius:8px; margin-top:10px; word-break:break-word; }
+  .issue { border-left:4px solid var(--bad); background:#fdf1f0; padding:10px 12px; border-radius:6px; margin-top:8px; }
+  .issue.confirm { border-color:var(--warn); background:#fff7e6; }
+  .issue b { display:block; }
+  .pass { border-left:4px solid var(--ok); background:#eef8f2; padding:10px 12px; border-radius:6px; margin-top:8px; }
+  .chip { display:inline-block; padding:1px 8px; border:1px solid var(--line); border-radius:999px; font-size:13px; margin-right:6px; background:#fafafc; }
+  .diff { display:flex; gap:12px; margin-top:6px; flex-wrap:wrap; }
+  .diff span { font:600 18px ui-monospace,monospace; }
+  .customer { color:var(--ok); } .banner-has { color:var(--bad); }
+  #err { color:var(--bad); margin-top:8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NameLock</h1>
+  <p class="sub">Paste the customer's message. A local model drafts the banner. The print button stays off if a single letter of a name has changed.</p>
+
+  <section>
+    <label for="note">Customer's message</label>
+    <textarea id="note" placeholder="blue flex 6 by 3, birthday, name Aadhya, with two a's, not Adya"></textarea>
+    <div class="row">
+      <button id="draft">Draft banner</button>
+      <select id="sample" class="secondary" aria-label="Sample messages"><option value="">Sample messages...</option></select>
+      <label id="acwrap" class="meta" style="display:none;margin:0;font-weight:400"><input type="checkbox" id="ac"> imitate a tool that "fixes" spellings</label>
+    </div>
+    <div class="meta" id="backend" style="margin-top:8px"></div>
+    <div id="err"></div>
+  </section>
+
+  <section id="result" style="display:none">
+    <label for="names">Names on the banner (exactly as the customer wrote them, comma separated)</label>
+    <input type="text" id="names">
+    <label for="banner" style="margin-top:12px">Banner text</label>
+    <input type="text" id="bannertext">
+    <div class="banner" id="preview"></div>
+    <div id="verdict"></div>
+    <div class="row">
+      <button id="print" disabled>Print banner</button>
+      <span class="meta" id="printnote"></span>
+    </div>
+  </section>
+
+  <section>
+    <div class="meta"><b>Spellings this shop has approved:</b> <span id="book">none yet</span></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let timer = null, last = null, mode = "local";
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)} : {});
+  const text = await r.text();
+  let data; try { data = JSON.parse(text); } catch { data = text; }
+  if (!r.ok) throw new Error((data && data.detail) || text);
+  return data;
+}
+const order = () => ({ note: $("note").value, names: $("names").value.split(",").map(s => s.trim()).filter(Boolean), banner: $("bannertext").value });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render(v) {
+  last = v;
+  $("preview").textContent = $("bannertext").value || "";
+  let h = "";
+  if (v.printable) h += '<div class="pass"><b>Names match the customer\'s message.</b>Safe to print.</div>';
+  for (const [i, it] of v.issues.entries()) {
+    h += `<div class="issue ${it.severity}"><b>${it.severity === "block" ? "Do not print" : "Check this"}: ${esc(it.message)}</b>`;
+    if (it.found && it.suggestion && it.kind === "respelled")
+      h += `<div class="diff"><div>Banner has <span class="banner-has">${esc(it.found)}</span></div><div>Customer wrote <span class="customer">${esc(it.suggestion)}</span></div></div>`;
+    if (it.kind === "confirm_book")
+      h += `<div class="row"><button class="secondary" data-confirm="${esc(it.name)}">Different person - approve "${esc(it.name)}"</button></div>`;
+    if (it.kind === "not_in_note" && it.suggestion)
+      h += `<div class="row"><button class="secondary" data-name="${esc(it.found)}" data-to="${esc(it.suggestion)}">Use the customer's spelling: ${esc(it.suggestion)}</button></div>`;
+    h += "</div>";
+  }
+  if (v.fixed_banner) h += `<div class="row"><button id="usefix">Use the customer's spelling on the banner</button></div>`;
+  $("verdict").innerHTML = h;
+  $("print").disabled = !v.printable;
+  $("printnote").textContent = v.printable ? "" : "Print is off until the names match.";
+  const fix = $("usefix"); if (fix) fix.onclick = () => { $("bannertext").value = last.fixed_banner; recheck(); };
+  document.querySelectorAll("[data-confirm]").forEach(b => b.onclick = async () => { await api("/api/approve", {name:b.dataset.confirm}); loadBook(); recheck(); });
+  document.querySelectorAll("[data-name]").forEach(b => b.onclick = () => {
+    const names = $("names").value.split(",").map(s => s.trim()).map(n => n === b.dataset.name ? b.dataset.to : n);
+    $("names").value = names.join(", ");
+    $("bannertext").value = $("bannertext").value.split(b.dataset.name).join(b.dataset.to);
+    recheck();
+  });
+}
+
+async function recheck() { try { render(await api("/api/verify", order())); $("err").textContent = ""; } catch (e) { $("err").textContent = e.message; } }
+const soon = () => { clearTimeout(timer); timer = setTimeout(recheck, 250); };
+
+async function loadBook() { const b = await api("/api/book"); $("book").textContent = b.approved.length ? b.approved.join(", ") : "none yet"; }
+
+$("draft").onclick = async () => {
+  $("err").textContent = ""; $("draft").disabled = true; $("draft").textContent = "Drafting...";
+  try {
+    const r = await api("/api/draft", { note: $("note").value, autocorrect: $("ac").checked ? "banner" : null });
+    $("names").value = r.draft.names.join(", ");
+    $("bannertext").value = r.draft.banner;
+    $("backend").textContent = "Drafted by: " + r.draft.backend;
+    $("result").style.display = "block";
+    render(r.verdict);
+  } catch (e) { $("err").textContent = e.message; }
+  $("draft").disabled = false; $("draft").textContent = "Draft banner";
+};
+$("names").oninput = soon; $("bannertext").oninput = soon;
+$("sample").onchange = () => { if ($("sample").value) $("note").value = $("sample").value; };
+
+$("print").onclick = async () => {
+  try {
+    const html = await api("/api/print", order());
+    const w = window.open("", "_blank"); w.document.write(html); w.document.close();
+    loadBook();
+  } catch (e) { $("err").textContent = e.message; }
+};
+
+(async () => {
+  const s = await api("/api/status"); mode = s.mode;
+  for (const x of s.samples) { const o = document.createElement("option"); o.value = x.note; o.textContent = x.label; $("sample").appendChild(o); }
+  $("backend").textContent = s.mode === "demo" ? s.note : (s.model_ready ? "Model: " + s.drafter : "Model not ready: " + s.drafter + ". Start Ollama and pull the model.");
+  if (s.mode === "demo") $("acwrap").style.display = "inline";
+  loadBook();
+})();
+</script>
+</body>
+</html>

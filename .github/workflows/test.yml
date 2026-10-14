@@ -1,0 +1,19 @@
+name: name-lock
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-dev.txt
+      - name: Unit tests
+        run: python -m pytest -q
+      - name: Twenty names through a faithful drafter (no false alarms allowed to leak)
+        run: python bench.py --backend scripted
+      - name: Twenty names through a simulated autocorrecting tool (nothing may leak)
+        run: python bench.py --backend scripted-autocorrect

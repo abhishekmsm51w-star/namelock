@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: namelock-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn namelock.app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      # Public demo: scripted drafter, in-memory book, sample notes only.
+      # The real model and real customer messages stay on the shop laptop.
+      - key: NAMELOCK_BACKEND
+        value: demo
+      - key: PYTHON_VERSION
+        value: 3.11.9
