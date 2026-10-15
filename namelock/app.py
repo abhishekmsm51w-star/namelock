@@ -31,8 +31,11 @@ def _load_env() -> None:
 
 _load_env()
 
-# NAMELOCK_BACKEND=ollama (default, real model on this machine) | demo (no model, sample notes)
-DEMO = os.environ.get("NAMELOCK_BACKEND", "ollama").lower() == "demo"
+# NAMELOCK_BACKEND=ollama (default, real model on this machine) | demo (no model, sample notes).
+# Render always sets RENDER=true. The public host must never call Ollama.
+DEMO = os.environ.get("NAMELOCK_BACKEND", "ollama").lower() == "demo" or bool(
+    os.environ.get("RENDER")
+)
 
 app = FastAPI(title="NameLock")
 book = open_book(demo=DEMO)

@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn namelock.app:app --host 0.0.0.0 --port $PORT
+    startCommand: NAMELOCK_BACKEND=demo uvicorn namelock.app:app --host 0.0.0.0 --port $PORT
     envVars:
       # Public demo: scripted drafter, in-memory book, sample notes only.
       # The real model and real customer messages stay on the shop laptop.
