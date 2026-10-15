@@ -28,7 +28,7 @@ Built for the Hacktoberfest Open-Source AI Challenge, Week 2 (Side Hustle).
 
 ```bash
 pip install -r requirements.txt
-ollama pull gemma3:4b            # model name is set by NAMELOCK_MODEL
+ollama pull gemma3:1b            # model name is set by NAMELOCK_MODEL
 uvicorn namelock.app:app --port 8000
 ```
 
@@ -55,16 +55,14 @@ Done and verified:
   shows "Do not print", print is disabled, one click restores the customer's spelling, print turns on.
 - Scripted benchmark: 20 of 20 autocorrected names caught, 0 leaked. This is a simulation of a
   tool that rewrites names, not a measurement of Gemma.
+- Real Gemma run, 2026-10-15, `gemma3:1b` via Ollama on this PC: 20 names, the model dropped 2
+  from the banner (Siobhan, Mary-Anne), the lock caught both, 0 leaked, 0 false alarms.
+  Median draft 0.4s, first call 61s. Re-run with `python bench.py --backend ollama -v`.
+- Tiger service `db-18894` accepts `DATABASE_URL` from `.env` (gitignored). A test row was
+  written and deleted. The table stores approved names only. It does not use pgvector or
+  hybrid search, so this is a plain Postgres store, not the vector-search prize shape.
 
 Not done:
-- Ollama is not confirmed installed on this machine. The winget download had not finished after
-  12 minutes and may still be running, so check `ollama --version` first. Until it works, there is no
-  real Gemma number. If it is missing, run `winget install Ollama.Ollama`, then `ollama pull gemma3:4b`, then
-  `python bench.py --backend ollama -v`. Check that tag exists or set `NAMELOCK_MODEL`.
-- Tiger: `PostgresBook` is written but never run. The saved password for service `db-18894`
-  was rejected (`password authentication failed for user "tsdbadmin"`). Get a working connection
-  string, set `DATABASE_URL`, `pip install -r requirements-tiger.txt`, and try it.
-  It stores approved names only; it does not use pgvector or hybrid search.
 - Render deploy, `.tech` domain, a real shop's twenty odd names in `namelock/cases.py`, a first user,
   and the DEV post.
 

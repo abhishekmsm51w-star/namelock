@@ -70,7 +70,7 @@ class OllamaDrafter:
         host: str | None = None,
         timeout: float = 300.0,
     ) -> None:
-        self.model = model or os.environ.get("NAMELOCK_MODEL", "gemma3:4b")
+        self.model = model or os.environ.get("NAMELOCK_MODEL", "gemma3:1b")
         self.host = (host or os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")).rstrip("/")
         if not self.host.startswith("http"):
             self.host = "http://" + self.host

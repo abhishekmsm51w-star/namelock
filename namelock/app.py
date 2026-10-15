@@ -16,6 +16,21 @@ from .lock import verify
 
 STATIC = Path(__file__).resolve().parent.parent / "static"
 
+
+def _load_env() -> None:
+    path = STATIC.parent / ".env"
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"'))
+
+
+_load_env()
+
 # NAMELOCK_BACKEND=ollama (default, real model on this machine) | demo (no model, sample notes)
 DEMO = os.environ.get("NAMELOCK_BACKEND", "ollama").lower() == "demo"
 
