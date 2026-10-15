@@ -51,6 +51,8 @@ python bench.py --backend ollama                 # the real model, once Ollama i
 Done and verified:
 - Lock, spelling book (SQLite), scripted drafter, web page, print gate. 105 tests pass.
   Breaking the lock on purpose makes 26 of them fail, so they are not vacuous.
+- Checked by hand in a browser (demo mode): the "autocorrecting tool" turns Aadhya into Adya, the page
+  shows "Do not print", print is disabled, one click restores the customer's spelling, print turns on.
 - Scripted benchmark: 20 of 20 autocorrected names caught, 0 leaked. This is a simulation of a
   tool that rewrites names, not a measurement of Gemma.
 
@@ -63,7 +65,6 @@ Not done:
   was rejected (`password authentication failed for user "tsdbadmin"`). Get a working connection
   string, set `DATABASE_URL`, `pip install -r requirements-tiger.txt`, and try it.
   It stores approved names only; it does not use pgvector or hybrid search.
-- Not yet looked at in a browser (screenshot attempt was interrupted).
 - Render deploy, `.tech` domain, a real shop's twenty odd names in `namelock/cases.py`, a first user,
   and the DEV post.
 
