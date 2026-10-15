@@ -23,7 +23,7 @@
   .banner { font:700 28px/1.2 system-ui,sans-serif; text-align:center; padding:28px 12px; border:2px dashed var(--line); border-radius:8px; margin-top:10px; word-break:break-word; }
   .issue { border-left:4px solid var(--bad); background:#fdf1f0; padding:10px 12px; border-radius:6px; margin-top:8px; }
   .issue.confirm { border-color:var(--warn); background:#fff7e6; }
-  .issue b { display:block; }
+  .issue b, .pass b { display:block; }
   .pass { border-left:4px solid var(--ok); background:#eef8f2; padding:10px 12px; border-radius:6px; margin-top:8px; }
   .chip { display:inline-block; padding:1px 8px; border:1px solid var(--line); border-radius:999px; font-size:13px; margin-right:6px; background:#fafafc; }
   .diff { display:flex; gap:12px; margin-top:6px; flex-wrap:wrap; }
@@ -84,8 +84,7 @@ function render(v) {
   last = v;
   $("preview").textContent = $("bannertext").value || "";
   let h = "";
-  if (v.printable) h += '<div class="pass"><b>Names match the customer\'s message.</b>Safe to print.</div>';
-  for (const [i, it] of v.issues.entries()) {
+  if (v.printable) h += '<div class="pass"><b>Names match the customer\'s message.</b>Safe to print.</div>';  for (const [i, it] of v.issues.entries()) {
     h += `<div class="issue ${it.severity}"><b>${it.severity === "block" ? "Do not print" : "Check this"}: ${esc(it.message)}</b>`;
     if (it.found && it.suggestion && it.kind === "respelled")
       h += `<div class="diff"><div>Banner has <span class="banner-has">${esc(it.found)}</span></div><div>Customer wrote <span class="customer">${esc(it.suggestion)}</span></div></div>`;
